@@ -4,7 +4,7 @@ import time
 import random
 from rs3clans import clans
 
-DB = "data/clan_tracker.db"
+DB = "/app/data/clan_tracker.db"
 
 def main():
     

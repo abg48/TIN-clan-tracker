@@ -1,0 +1,7 @@
+services:
+  clan_sync:
+    build: .
+    container_name: clan_sync
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
