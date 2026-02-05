@@ -61,6 +61,8 @@ def update_all_members():
 
 # Updates db to reflect roster changes since last update
 def sync_members():
+    print("--- ROSTER UPDATES ---")
+
     clan = clans.Clan("The Iron Nation")
     live_members = {
         member.name: member.rank
@@ -83,12 +85,15 @@ def sync_members():
     with sqlite3.connect(DB) as conn:
         for rsn in new_members:
             conn.execute("INSERT INTO members (rsn, rank, active) VALUES (?, ?, 1)", (rsn, live_members[rsn]))
+            print("Added " + rsn + " to clan")
 
         for rsn in rejoining_members:
             conn.execute("UPDATE members SET active=1, rank=? WHERE rsn=? COLLATE NOCASE", (live_members[rsn], rsn))
+            print("Added " + rsn + " to clan")
 
         for rsn in departed_members:
             conn.execute("UPDATE members SET active = 0 WHERE rsn=? COLLATE NOCASE", (rsn,))
+            print("Removed " + rsn + " from clan")
 
         for rsn in active_members:
             live_rank = live_members[rsn]
@@ -96,6 +101,7 @@ def sync_members():
 
             if live_rank != db_rank:
                 conn.execute("UPDATE members SET rank=? WHERE rsn=? COLLATE NOCASE", (live_rank, rsn))
+                print(rsn + " has ranked up! Was: " + db_rank + " now: " + live_rank)
 
 if __name__ == "__main__":
     main()
