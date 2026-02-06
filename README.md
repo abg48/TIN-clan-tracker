@@ -36,24 +36,11 @@ git clone https://github.com/abg48/TIN-clan-tracker.git
 cd TIN-clan-tracker
 ```
 
-## Prepare the Database
-
-1. Create a data/ folder in the project root:
-```bash
-mkdir data
-```
-2. Copy the database to the new data folder
-3. Optionally, should the database have been lost, a script is provided to provision a new blank db:
-```bash
-python3 ./app/db/db_init.py
-```
-
 ## Build and Run the Docker Container
 ```bash
-sudo docker compose build
-sudo docker compose up -d
+sudo docker compose up -d --build
 ```
-- The container runs in detached mode (-d)
+- The container runs in detached mode (-d) and built (--build) if needed
 - Cron inside the container is automatically configured to handle nightly API scrapes, no further action is required at this point beyond testing
 - The data/ folder is mounted, so SQLite db & chron logs are persistent
 
@@ -70,7 +57,7 @@ sudo docker compose logs -f
 ## Manual Sync
 To test or run an API sync immediately:
 ```bash
-sudo docker compose exec clan_sync python3 /app/app/sync/sync.py
+sudo docker compose exec clan_sync python3 -m app.main
 ```
 This runs a manual full-clan scrape & updates the db without waiting for the normal nightly run. NOTE: Currently this takes anywhere from 30 minutes to an hour
 

@@ -19,7 +19,15 @@ def fetch_total_xp(rsn, max_retries=5, delay=2):
 
             total_xp = data.get('totalxp')
 
-            return int(total_xp)
+            if total_xp is None:
+                print(f"No totalxp in response for {rsn}. Response: {data}")
+                return None
+            
+            try:
+                return int(total_xp)
+            except (TypeError, ValueError):
+                print(f"Invalid totalxp value for {rsn}: {total_xp}")
+                return None
         
         except requests.RequestException as e:
             print(f"Error fetching XP for {rsn}")
