@@ -2,13 +2,15 @@ import requests
 import sqlite3
 import time
 import random
-from app.config import CLAN_NAME, DB_PATH
+from app.config import CLAN_NAME
 from app.db.members import get_all_members, insert_member, mark_member_active, mark_member_inactive, update_member_rank
 from app.db.xp_snapshots import save_snapshot
 from app.external.runemetrics import fetch_total_xp
+from app.db.schema import create_tables
 from rs3clans import clans
 
 def main():
+    create_tables()
     sync_members()
     update_all_members()
 
