@@ -2,7 +2,7 @@
 # This script sets up cron to run the db sync nightly
 
 # Setup cron job to run at 2am UTC every day
-echo "0 2 * * * cd /app && /usr/local/bin/python3 app/sync/sync.py >> /app/data/cron.log 2>&1" > /etc/cron.d/xp_sync_cron
+echo "0 2 * * * cd /app && /usr/local/bin/python3 -m app.main >> /app/data/cron.log 2>&1" > /etc/cron.d/xp_sync_cron
 
 # Give execution rights
 chmod 0644 /etc/cron.d/xp_sync_cron

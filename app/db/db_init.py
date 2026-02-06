@@ -1,6 +1,5 @@
 import sqlite3
-
-DB = "clan_tracker.db"
+from app.config import DB_PATH
 
 schema = """
 CREATE TABLE IF NOT EXISTS members (
@@ -17,14 +16,7 @@ CREATE TABLE IF NOT EXISTS xp_snapshots(
     total_xp INTEGER,
     FOREIGN KEY(member_id) REFERENCES members(id)
 );
-
-CREATE TABLE IF NOT EXISTS inactivity_flags (
-    member_id INTEGER,
-    flagged_on DATETIME DEFAULT CURRENT_TIMESTAMP,
-    reason TEXT,
-    FOREIGN KEY(member_id) REFERENCES members(id)
-);
 """
 
-with sqlite3.connect(DB) as conn:
+with sqlite3.connect(DB_PATH) as conn:
     conn.executescript(schema)
