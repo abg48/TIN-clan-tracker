@@ -7,12 +7,14 @@ from app.db.members import get_all_members, insert_member, mark_member_active, m
 from app.db.xp_snapshots import save_snapshot
 from app.external.runemetrics import fetch_total_xp
 from app.db.schema import create_tables
+from app.db.connection import backup_db
 from rs3clans import clans
 
 def main():
     create_tables()
     sync_members()
     update_all_members()
+    backup_db()
 
 # Updates db to reflect roster changes since last update
 def sync_members():
