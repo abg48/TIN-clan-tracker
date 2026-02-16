@@ -1,1 +1,3 @@
 rs3clans
+discord.py
+python-dotenv

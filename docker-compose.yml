@@ -1,7 +1,20 @@
 services:
-  clan_sync:
+  sync:
     build: .
-    container_name: clan_sync
+    container_name: sync
+    environment:
+      - CLAN_NAME=${CLAN_NAME}
+      - DB_PATH=${DB_PATH}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  bot:
+    build: .
+    container_name: bot
+    command: python -m app.bot
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

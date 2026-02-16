@@ -1,8 +1,11 @@
+import os
 import requests
 import sqlite3
 import time
 import random
-from app.config import CLAN_NAME
+from dotenv import load_dotenv
+
+load_dotenv()
 from app.db.members import get_all_members, insert_member, mark_member_active, mark_member_inactive, update_member_rank
 from app.db.xp_snapshots import save_snapshot
 from app.external.runemetrics import fetch_total_xp
@@ -20,7 +23,8 @@ def main():
 def sync_members():
     print("--- ROSTER UPDATES ---")
 
-    clan = clans.Clan(CLAN_NAME)
+    clan_name = os.getenv("CLAN_NAME", "The Iron Nation")
+    clan = clans.Clan(clan_name)
     live_members = {member.name: member.rank for member in clan}
     live_rsns = set(live_members)
 
