@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install Linux dependencies
-RUN apt-get update && apt-get install -y cron
+RUN apt-get update && apt-get install -y cron build-essential
 
 # Install Python dependencies
 COPY requirements.txt .

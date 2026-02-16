@@ -5,7 +5,7 @@ def get_member_total_xp(rsn):
     with get_connection() as conn:
         row = conn.execute(
             """
-            SELECT m.id, m.rsn, x.total_xp, x.timestamp
+            SELECT m.id, m.rsn, m.rank, x.total_xp, x.timestamp
             FROM members m
             LEFT JOIN xp_snapshots x ON m.id = x.member_id
             WHERE m.rsn = ? COLLATE NOCASE AND x.id = (
