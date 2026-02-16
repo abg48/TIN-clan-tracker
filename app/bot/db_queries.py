@@ -54,7 +54,7 @@ def get_inactive_members_by_rank_and_days(rank, days):
             LEFT JOIN xp_snapshots old ON m.id = old.member_id
                 AND old.timestamp <= ?
                 AND old.id = (SELECT MAX(id) FROM xp_snapshots WHERE member_id = m.id AND timestamp <= ?)
-            WHERE m.active = 0
+            WHERE m.active = 1
             AND m.rank = ? COLLATE NOCASE
             AND latest.total_xp = old.total_xp
             ORDER BY latest.timestamp ASC
