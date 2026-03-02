@@ -85,3 +85,17 @@ def get_member_xp_history(rsn, days=7):
             (rsn, cutoff_date)
         ).fetchall()
         return [dict(row) for row in rows]
+    
+def get_private_members():
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT m.id, m.rsn, m.rank
+            FROM members m
+            LEFT JOIN xp_snapshots x ON m.id = x.member_id
+                AND x.id = (SELECT MAX(id) FROM xp_snapshots WHERE member_id = m.id)
+            WHERE m.active = 1 and x.total_xp IS NULL
+            ORDER BY m.rsn
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]

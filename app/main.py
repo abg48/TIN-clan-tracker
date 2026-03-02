@@ -71,9 +71,12 @@ def update_all_members():
         member_id = member['id']
         rsn = member['rsn']
         xp = fetch_total_xp(rsn)
+        save_snapshot(member_id, xp)
+
         if xp is not None:
-            save_snapshot(member_id, xp)
             print(f"{rsn}: snapshot saved ({xp})")
+        else:
+            print(f"{rsn}: Profile private, saved Null")
 
 if __name__ == "__main__":
     main()

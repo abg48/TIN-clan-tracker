@@ -7,7 +7,8 @@ from app.bot.db_queries import(
     get_inactive_members,
     get_members_by_rank,
     get_member_xp_history,
-    get_inactive_members_by_rank_and_days
+    get_inactive_members_by_rank_and_days,
+    get_private_members
 )
 
 def paginate_lines(lines: List[str], max_chars=2000) -> List[str]:
@@ -142,6 +143,28 @@ class MembersCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        view = InactivePaginationView(pages=pages, author_id=ctx.author.id, title=title)
+        initial_embed = view._build_embed()
+        message = await ctx.send(embed=initial_embed, view=view)
+        view.message = message
+
+    @commands.hybrid_command(name="private", description="Show which clan members have private profiles")
+    async def private(self, ctx):
+        private_members = get_private_members()
+
+        if not private_members:
+            await ctx.send("No members with private profiles found.")
+            return
+        
+        lines = [f"- {m['rsn']} ({m['rank']})" for m in private_members]
+        pages = paginate_lines(lines)
+        title = f"Private Profiles: ({len(private_members)} members)"
+
+        if len(pages) == 1:
+            embed = discord.Embed(title=title, description=pages[0], color=discord.Color.orange())
+            await ctx.send(embed=embed)
+            return
+        
         view = InactivePaginationView(pages=pages, author_id=ctx.author.id, title=title)
         initial_embed = view._build_embed()
         message = await ctx.send(embed=initial_embed, view=view)
