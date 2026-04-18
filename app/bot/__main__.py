@@ -6,6 +6,7 @@ import logging
 import asyncio
 import discord
 from discord.ext import commands
+from app.bot.cogs.events import UndoDropView
 
 # Basic logging
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +25,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
+    bot.add_view(UndoDropView())
     logger.info(f"Logged in as {bot.user}")
     logger.info(f"Loaded {len(bot.cogs)} cogs")
     try:

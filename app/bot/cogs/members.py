@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 from typing import List
 from app.bot.db_queries import(
@@ -79,12 +80,12 @@ class MembersCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(name="xp", description="Get a member's total xp")
-    async def get_xp(self, ctx, rsn: str):
+    @app_commands.command(name="xp", description="Get a member's total xp")
+    async def get_xp(self, interaction: discord.Interaction, rsn: str):
         member_data = get_member_total_xp(rsn)
 
         if not member_data or member_data['total_xp'] is None:
-            await ctx.send(f"Member **{rsn}** not found or has no xp data.")
+            await interaction.response.send_message(f"Member **{rsn}** not found or has no xp data.")
             return
         
         embed = discord.Embed(
@@ -95,14 +96,14 @@ class MembersCog(commands.Cog):
         embed.add_field(name="Total XP", value=f"{member_data['total_xp']:,}", inline=True)
         embed.add_field(name="Last Updated", value=member_data['timestamp'], inline=False)
 
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.hybrid_command(name="leaderboard", description="Show the clan xp leaderboard")
-    async def leaderboard(self, ctx):
+    @app_commands.command(name="leaderboard", description="Show the clan xp leaderboard")
+    async def leaderboard(self, interaction: discord.Interaction):
         members = get_all_member_xp()
 
         if not members:
-            await ctx.send("No members with xp data found.")
+            await interaction.response.send_message("No members with xp data found.")
             return
         
         # Take top 10 members
@@ -119,18 +120,18 @@ class MembersCog(commands.Cog):
         )
         embed.description = leaderboard_text
 
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.hybrid_command(name="inactive", description="Show inactive members by rank and days")
-    async def inactive(self, ctx, rank: str, days: int):
+    @app_commands.command(name="inactive", description="Show inactive members by rank and days")
+    async def inactive(self, interaction: discord.Interaction, rank: str, days: int):
         if days < 1:
-            await ctx.send("Days must be at least 1.")
+            await interaction.response.send_message("Days must be at least 1.", ephemeral=True)
             return
         
         inactive_members = get_inactive_members_by_rank_and_days(rank, days)
 
         if not inactive_members:
-            await ctx.send(f"No **{rank}** members found inactive in {days}+ days.")
+            await interaction.response.send_message(f"No **{rank}** members found inactive in {days}+ days.", ephemeral=True)
             return
         
         lines = [f"- {m['rsn']}: {m['current_xp']:,} XP (unchanged since {m['old_timestamp']})" 
@@ -140,20 +141,19 @@ class MembersCog(commands.Cog):
 
         if len(pages) == 1:
             embed = discord.Embed(title=title, description=pages[0], color=discord.Color.red())
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
-        view = InactivePaginationView(pages=pages, author_id=ctx.author.id, title=title)
-        initial_embed = view._build_embed()
-        message = await ctx.send(embed=initial_embed, view=view)
-        view.message = message
+        view = InactivePaginationView(pages=pages, author_id=interaction.user.id, title=title)
+        await interaction.response.send_message(embed=view._build_embed(), view=view)
+        view.message = await interaction.original_response()
 
-    @commands.hybrid_command(name="private", description="Show which clan members have private profiles")
-    async def private(self, ctx):
+    @app_commands.command(name="private", description="Show which clan members have private profiles")
+    async def private(self, interaction: discord.Interaction):
         private_members = get_private_members()
 
         if not private_members:
-            await ctx.send("No members with private profiles found.")
+            await interaction.response.send_message("No members with private profiles found.", ephemeral=True)
             return
         
         lines = [f"- {m['rsn']} ({m['rank']})" for m in private_members]
@@ -162,13 +162,12 @@ class MembersCog(commands.Cog):
 
         if len(pages) == 1:
             embed = discord.Embed(title=title, description=pages[0], color=discord.Color.orange())
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
         
-        view = InactivePaginationView(pages=pages, author_id=ctx.author.id, title=title)
-        initial_embed = view._build_embed()
-        message = await ctx.send(embed=initial_embed, view=view)
-        view.message = message
+        view = InactivePaginationView(pages=pages, author_id=interaction.user.id, title=title)
+        await interaction.response.send_message(embed=view._build_embed(), view=view)
+        view.message = await interaction.original_response()
 
 async def setup(bot):
     await bot.add_cog(MembersCog(bot))
