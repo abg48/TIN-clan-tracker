@@ -9,6 +9,19 @@ services:
       - ./data:/app/data
     restart: unless-stopped
 
+  api:
+    build: .
+    container_name: api
+    command: python -m app.sync_api
+    environment:
+      - DB_PATH=${DB_PATH}
+      - SYNC_API_PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
   bot:
     build: .
     container_name: bot
@@ -20,6 +33,7 @@ services:
       - GOOGLE_CLIENT_EMAIL=${GOOGLE_CLIENT_EMAIL}
       - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
       - GOOGLE_SPREADSHEET_ID=${GOOGLE_SPREADSHEET_ID}
+      - SYNC_API_BASE_URL=${SYNC_API_BASE_URL:-http://api:8000}
     volumes:
       - ./data:/app/data
     restart: unless-stopped
