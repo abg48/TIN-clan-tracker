@@ -11,6 +11,7 @@ from app.bot.db_queries import(
     get_inactive_members_by_rank_and_days,
     get_private_members
 )
+from app.db.members import rename_member
 
 def paginate_lines(lines: List[str], max_chars=2000) -> List[str]:
     pages = []
@@ -168,6 +169,26 @@ class MembersCog(commands.Cog):
         view = InactivePaginationView(pages=pages, author_id=interaction.user.id, title=title)
         await interaction.response.send_message(embed=view._build_embed(), view=view)
         view.message = await interaction.original_response()
+
+    @app_commands.command(name="rename", description="Manually link a new RSN to an older player's data")
+    async def rename(self, interaction: discord.Interaction, new_rsn: str, old_rsn: str):
+        
+        success, message = rename_member(old_rsn, new_rsn)
+        
+        if success:
+            embed = discord.Embed(
+                title="Member Renamed",
+                description=message,
+                color=discord.Color.green()
+            )
+        else:
+            embed = discord.Embed(
+                title="Rename Failed",
+                description=message,
+                color=discord.Color.red()
+            )
+        
+        await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(MembersCog(bot))

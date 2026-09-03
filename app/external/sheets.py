@@ -6,8 +6,20 @@ from datetime import datetime
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-VALID_ITEMS_SHEET = 'Item DB'
-EVENT_LOG_SHEET = 'Event Log'
+VALID_ITEMS_SHEET = 'Discord bot item db'
+EVENT_LOG_SHEET = 'Discord bot log'
+SCOREBOARD_SHEET = 'Discord bot scoreboard'
+
+EVENT_LOG_HEADERS = ['Drop ID', 'Timestamp', 'User', 'Item', 'Team', 'Archive URL']
+
+
+def build_log_row(drop_id: str, timestamp: str, user: str, item_name: str, team: str, archive_url: str | None = None) -> list[str]:
+    return [drop_id, timestamp, user, item_name, team, archive_url or ""]
+
+
+def ensure_event_log_headers(sheet) -> None:
+    if not sheet.get_all_values():
+        sheet.append_row(EVENT_LOG_HEADERS)
 
 def _get_credentials() -> Credentials:
     account_info = {
@@ -24,10 +36,11 @@ def get_sheet(sheet_name: str):
     spreadsheet_id = os.environ["GOOGLE_SPREADSHEET_ID"]
     return client.open_by_key(spreadsheet_id).worksheet(sheet_name)
 
-def log_item(item_name: str, user: str, timestamp: str, team: str):
+def log_item(item_name: str, user: str, timestamp: str, team: str, archive_url: str | None = None):
     drop_id = str(uuid.uuid4())[:8]
     sheet = get_sheet(EVENT_LOG_SHEET)
-    sheet.append_row([drop_id, timestamp, user, item_name, team])
+    ensure_event_log_headers(sheet)
+    sheet.append_row(build_log_row(drop_id, timestamp, user, item_name, team, archive_url))
     return drop_id
 
 def undo_item(drop_id: str):
@@ -38,6 +51,26 @@ def undo_item(drop_id: str):
             sheet.delete_rows(i + 1)
             return True
     return False
+
+def get_scoreboard_scores() -> dict[int, str]:
+    """
+    Fetch scoreboard scores from the scoreboard sheet.
+    Returns a dict mapping team number (1-5) to their score.
+    """
+    sheet = get_sheet(SCOREBOARD_SHEET)
+    scores = {}
+    
+    try:
+        # Fetch cells B1:B5 all at once
+        cells = sheet.range('B1:B5')
+        for i, cell in enumerate(cells, start=1):
+            scores[i] = cell.value if cell.value else "0"
+    except Exception as e:
+        # If batch fetch fails, return zeros for all teams
+        for i in range(1, 6):
+            scores[i] = "0"
+    
+    return scores
 
 
 class EventItemCache:

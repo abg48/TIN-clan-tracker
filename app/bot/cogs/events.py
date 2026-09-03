@@ -2,8 +2,8 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
-from datetime import datetime
-from app.external.sheets import log_item, undo_item, item_cache
+from datetime import datetime, timezone
+from app.external.sheets import log_item, undo_item, item_cache, get_scoreboard_scores
 
 async def item_name_autocomplete(interaction: discord.Interaction, current: str):
     suggestions = [item for item in item_cache.get_items() if current.lower() in item.lower()]
@@ -19,7 +19,7 @@ class UndoDropView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Undo", style=discord.ButtonStyle.danger, custom_id="undo_drop")
+    @discord.ui.button(label="Invalidate", style=discord.ButtonStyle.danger, custom_id="undo_drop")
     async def undo_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         content = interaction.message.content
         
@@ -52,10 +52,23 @@ class UndoDropView(discord.ui.View):
         button.disabled = True
 
         if success:
-            await interaction.response.edit_message(
-                content = f"~~{content}~~\n-# Drop `{drop_id}` has been removed.",
-                view = self
-            )
+            archive_message = interaction.message
+            invalidation_note = f"\n-# Invalidated by {interaction.user.mention}"
+            updated_content = f"~~{content}~~\n-# Drop `{drop_id}` has been removed.{invalidation_note}"
+
+            try:
+                await interaction.response.edit_message(
+                    content=updated_content,
+                    view=self
+                )
+            except Exception as edit_error:
+                await interaction.followup.send(f"Failed to update the invalidation message: {edit_error}", ephemeral=True)
+                return
+
+            try:
+                await archive_message.edit(content=updated_content)
+            except Exception:
+                pass
         else:
             await interaction.response.edit_message(view=self)
             await interaction.followup.send(f"Drop '{drop_id}' could not be undone (not found).", ephemeral=True)
@@ -97,7 +110,7 @@ class EventsCog(commands.Cog):
                 file=await proof.to_file()
             )
             
-            drop_id = log_item(item_name, user, timestamp, team)
+            drop_id = log_item(item_name, user, timestamp, team, archive_message.jump_url)
 
             await archive_message.edit(
                 content=f"Drop proof | {item_name} | {interaction.user.mention} | {timestamp}\nDrop ID: {drop_id}",
@@ -119,6 +132,25 @@ class EventsCog(commands.Cog):
             await interaction.response.send_message("Event item database synced successfully.")
         except Exception as e:
             await interaction.response.send_message("Failed to sync event item database", ephemeral=True)
+
+    @app_commands.command(name="scoreboard", description="Display the current event scoreboard")
+    async def scoreboard(self, interaction: discord.Interaction):
+        try:
+            scores = get_scoreboard_scores()
+            
+            embed = discord.Embed(
+                title="Event Scoreboard",
+                color=discord.Color.blue(),
+                timestamp=datetime.now(timezone.utc)
+            )
+            
+            for team_num in range(1, 6):
+                score = scores.get(team_num, "0")
+                embed.add_field(name=f"Team {team_num}", value=str(score), inline=False)
+            
+            await interaction.response.send_message(embed=embed)
+        except Exception as e:
+            await interaction.response.send_message(f"Failed to fetch scoreboard: {e}", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(EventsCog(bot))
