@@ -1,7 +1,5 @@
-rs3clans
 discord.py
 python-dotenv
+requests
 gspread
 google-auth
-fastapi
-uvicorn

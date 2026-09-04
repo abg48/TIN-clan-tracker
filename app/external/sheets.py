@@ -1,8 +1,9 @@
 import os
-import gspread
 import uuid
-from google.oauth2.service_account import Credentials
 from datetime import datetime
+
+import gspread
+from google.oauth2.service_account import Credentials
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
@@ -21,6 +22,7 @@ def ensure_event_log_headers(sheet) -> None:
     if not sheet.get_all_values():
         sheet.append_row(EVENT_LOG_HEADERS)
 
+
 def _get_credentials() -> Credentials:
     account_info = {
         "type": "service_account",
@@ -31,10 +33,12 @@ def _get_credentials() -> Credentials:
     }
     return Credentials.from_service_account_info(account_info, scopes=SCOPES)
 
+
 def get_sheet(sheet_name: str):
     client = gspread.authorize(_get_credentials())
     spreadsheet_id = os.environ["GOOGLE_SPREADSHEET_ID"]
     return client.open_by_key(spreadsheet_id).worksheet(sheet_name)
+
 
 def log_item(item_name: str, user: str, timestamp: str, team: str, archive_url: str | None = None):
     drop_id = str(uuid.uuid4())[:8]
@@ -42,6 +46,7 @@ def log_item(item_name: str, user: str, timestamp: str, team: str, archive_url: 
     ensure_event_log_headers(sheet)
     sheet.append_row(build_log_row(drop_id, timestamp, user, item_name, team, archive_url))
     return drop_id
+
 
 def undo_item(drop_id: str):
     sheet = get_sheet(EVENT_LOG_SHEET)
@@ -52,6 +57,7 @@ def undo_item(drop_id: str):
             return True
     return False
 
+
 def get_scoreboard_scores() -> dict[int, str]:
     """
     Fetch scoreboard scores from the scoreboard sheet.
@@ -59,17 +65,15 @@ def get_scoreboard_scores() -> dict[int, str]:
     """
     sheet = get_sheet(SCOREBOARD_SHEET)
     scores = {}
-    
+
     try:
-        # Fetch cells B1:B5 all at once
         cells = sheet.range('B1:B5')
         for i, cell in enumerate(cells, start=1):
             scores[i] = cell.value if cell.value else "0"
-    except Exception as e:
-        # If batch fetch fails, return zeros for all teams
+    except Exception:
         for i in range(1, 6):
             scores[i] = "0"
-    
+
     return scores
 
 
@@ -85,5 +89,6 @@ class EventItemCache:
 
     def get_items(self) -> list[str]:
         return self.items
-    
+
+
 item_cache = EventItemCache()
