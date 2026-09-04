@@ -10,6 +10,6 @@ services:
       - GOOGLE_CLIENT_EMAIL=${GOOGLE_CLIENT_EMAIL}
       - GOOGLE_SPREADSHEET_ID=${GOOGLE_SPREADSHEET_ID}
       - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
-      - SYNC_API_URL=${SYNC_API_BASE_URL:-http://localhost:8000}
+      - SYNC_API_BASE_URL=${SYNC_API_BASE_URL:-http://localhost:8000}
     restart: unless-stopped
     network_mode: host
