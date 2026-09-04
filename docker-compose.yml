@@ -4,23 +4,8 @@ services:
     container_name: tin-bot
     environment:
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - SYNC_API_URL=${SYNC_API_URL:-http://api:8000}
+      - SYNC_API_URL=${SYNC_API_URL:-http://localhost:8000}
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     restart: unless-stopped
-    depends_on:
-      - api
-
-  api:
-    build:
-      context: ../TIN-sync
-      dockerfile: Dockerfile
-    container_name: tin-api
-    environment:
-      - DB_PATH=${DB_PATH}
-      - SYNC_API_PORT=8000
-    ports:
-      - "8000:8000"
-    volumes:
-      - ../TIN-sync/data:/app/data
-    restart: unless-stopped
+    network_mode: host
