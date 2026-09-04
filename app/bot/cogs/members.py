@@ -9,9 +9,9 @@ from app.bot.db_queries import(
     get_members_by_rank,
     get_member_xp_history,
     get_inactive_members_by_rank_and_days,
-    get_private_members
+    get_private_members,
+    rename_member
 )
-from app.db.members import rename_member
 
 def paginate_lines(lines: List[str], max_chars=2000) -> List[str]:
     pages = []
