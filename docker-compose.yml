@@ -2,10 +2,14 @@ services:
   bot:
     build: .
     container_name: tin-bot
+    command: python -m app.bot
     environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - SYNC_API_URL=${SYNC_API_URL:-http://localhost:8000}
-      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DISCORD_BOT_TOKEN=${DISCORD_TOKEN}
+      - PROOF_ARCHIVE_CHANNEL_ID=${PROOF_ARCHIVE_CHANNEL_ID}
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - GOOGLE_CLIENT_EMAIL=${GOOGLE_CLIENT_EMAIL}
+      - GOOGLE_SPREADSHEET_ID=${GOOGLE_SPREADSHEET_ID}
+      - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
+      - SYNC_API_URL=${SYNC_API_BASE_URL:-http://localhost:8000}
     restart: unless-stopped
     network_mode: host
