@@ -63,10 +63,6 @@ jobs:
           import os
           from pathlib import Path
 
-          template_path = Path(".aws/task-definition.json")
-          rendered_path = Path(".aws/task-definition.rendered.json")
-          template = template_path.read_text()
-
           required = {
               "DISCORD_TOKEN": os.environ.get("DISCORD_TOKEN"),
               "SYNC_API_BASE_URL": os.environ.get("SYNC_API_BASE_URL"),
@@ -76,22 +72,43 @@ jobs:
               if not value:
                   raise RuntimeError(f"Missing required GitHub secret or env var: {name}")
 
-          replacements = {
-              "__IMAGE__": json.dumps(f"{os.environ['ECR_REGISTRY']}/{os.environ['ECR_REPOSITORY']}:latest"),
-              "__EXECUTION_ROLE_ARN__": json.dumps(os.environ.get("ECS_EXECUTION_ROLE_ARN", "")),
-              "__DISCORD_TOKEN__": json.dumps(os.environ.get("DISCORD_TOKEN", "")),
-              "__PROOF_ARCHIVE_CHANNEL_ID__": json.dumps(os.environ.get("PROOF_ARCHIVE_CHANNEL_ID", "")),
-              "__SYNC_API_BASE_URL__": json.dumps(os.environ.get("SYNC_API_BASE_URL", "")),
-              "__GOOGLE_PROJECT_ID__": json.dumps(os.environ.get("GOOGLE_PROJECT_ID", "")),
-              "__GOOGLE_CLIENT_EMAIL__": json.dumps(os.environ.get("GOOGLE_CLIENT_EMAIL", "")),
-              "__GOOGLE_SPREADSHEET_ID__": json.dumps(os.environ.get("GOOGLE_SPREADSHEET_ID", "")),
-              "__GOOGLE_PRIVATE_KEY__": json.dumps(os.environ.get("GOOGLE_PRIVATE_KEY", "")),
+          env_entries = [
+              {"name": "DISCORD_TOKEN", "value": os.environ.get("DISCORD_TOKEN", "")},
+              {"name": "PROOF_ARCHIVE_CHANNEL_ID", "value": os.environ.get("PROOF_ARCHIVE_CHANNEL_ID", "")},
+              {"name": "SYNC_API_BASE_URL", "value": os.environ.get("SYNC_API_BASE_URL", "")},
+              {"name": "GOOGLE_PROJECT_ID", "value": os.environ.get("GOOGLE_PROJECT_ID", "")},
+              {"name": "GOOGLE_CLIENT_EMAIL", "value": os.environ.get("GOOGLE_CLIENT_EMAIL", "")},
+              {"name": "GOOGLE_SPREADSHEET_ID", "value": os.environ.get("GOOGLE_SPREADSHEET_ID", "")},
+              {"name": "GOOGLE_PRIVATE_KEY", "value": os.environ.get("GOOGLE_PRIVATE_KEY", "")},
+          ]
+
+          task_def = {
+              "family": "tin-bot",
+              "networkMode": "awsvpc",
+              "requiresCompatibilities": ["FARGATE"],
+              "cpu": "256",
+              "memory": "512",
+              "executionRoleArn": os.environ["ECS_EXECUTION_ROLE_ARN"],
+              "containerDefinitions": [
+                  {
+                      "name": "tin-bot",
+                      "image": f"{os.environ['ECR_REGISTRY']}/{os.environ['ECR_REPOSITORY']}:latest",
+                      "essential": True,
+                      "logConfiguration": {
+                          "logDriver": "awslogs",
+                          "options": {
+                              "awslogs-group": "/ecs/tin-bot",
+                              "awslogs-region": "us-east-2",
+                              "awslogs-stream-prefix": "ecs",
+                          },
+                      },
+                      "environment": env_entries,
+                  }
+              ],
           }
 
-          for key, value in replacements.items():
-              template = template.replace(key, value)
-
-          rendered_path.write_text(template)
+          out = Path(".aws/task-definition.rendered.json")
+          out.write_text(json.dumps(task_def, indent=2))
           PY
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
