@@ -13,26 +13,38 @@ env:
   ECR_REPOSITORY: tin-bot
   ECS_CLUSTER: tin-bot-cluster
   ECS_SERVICE: tin-bot-service
-  ECS_TASK_DEFINITION: tin-bot
+  ECS_TASK_DEFINITION: .aws/task-definition.json
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      PROOF_ARCHIVE_CHANNEL_ID: ${{ secrets.PROOF_ARCHIVE_CHANNEL_ID }}
+      SYNC_API_BASE_URL: ${{ secrets.SYNC_API_BASE_URL }}
+      GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+      GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
+      GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+      GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+      ECS_EXECUTION_ROLE_ARN: ${{ secrets.ECS_EXECUTION_ROLE_ARN }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Ensure CloudWatch log group exists
+        run: aws logs create-log-group --log-group-name /ecs/tin-bot --region $AWS_REGION || true
+
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image to Amazon ECR
         env:
@@ -44,11 +56,51 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      - name: Prepare task definition
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          template_path = Path(".aws/task-definition.json")
+          rendered_path = Path(".aws/task-definition.rendered.json")
+          template = template_path.read_text()
+
+          required = {
+              "DISCORD_TOKEN": os.environ.get("DISCORD_TOKEN"),
+              "SYNC_API_BASE_URL": os.environ.get("SYNC_API_BASE_URL"),
+              "ECS_EXECUTION_ROLE_ARN": os.environ.get("ECS_EXECUTION_ROLE_ARN"),
+          }
+          for name, value in required.items():
+              if not value:
+                  raise RuntimeError(f"Missing required GitHub secret or env var: {name}")
+
+          replacements = {
+              "__IMAGE__": json.dumps(f"{os.environ['ECR_REGISTRY']}/{os.environ['ECR_REPOSITORY']}:latest"),
+              "__EXECUTION_ROLE_ARN__": json.dumps(os.environ.get("ECS_EXECUTION_ROLE_ARN", "")),
+              "__DISCORD_TOKEN__": json.dumps(os.environ.get("DISCORD_TOKEN", "")),
+              "__PROOF_ARCHIVE_CHANNEL_ID__": json.dumps(os.environ.get("PROOF_ARCHIVE_CHANNEL_ID", "")),
+              "__SYNC_API_BASE_URL__": json.dumps(os.environ.get("SYNC_API_BASE_URL", "")),
+              "__GOOGLE_PROJECT_ID__": json.dumps(os.environ.get("GOOGLE_PROJECT_ID", "")),
+              "__GOOGLE_CLIENT_EMAIL__": json.dumps(os.environ.get("GOOGLE_CLIENT_EMAIL", "")),
+              "__GOOGLE_SPREADSHEET_ID__": json.dumps(os.environ.get("GOOGLE_SPREADSHEET_ID", "")),
+              "__GOOGLE_PRIVATE_KEY__": json.dumps(os.environ.get("GOOGLE_PRIVATE_KEY", "")),
+          }
+
+          for key, value in replacements.items():
+              template = template.replace(key, value)
+
+          rendered_path.write_text(template)
+          PY
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+
       - name: Update ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          task-definition: .aws/task-definition.rendered.json
           container-name: tin-bot
           image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
