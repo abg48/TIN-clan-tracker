@@ -81,52 +81,6 @@ class UndoDropView(discord.ui.View):
             await interaction.response.edit_message(view=self)
             await interaction.followup.send(f"Drop '{drop_id}' could not be undone (not found).", ephemeral=True)
 
-
-class SignupModal(discord.ui.Modal, title="Event Signup"):
-    in_game_name = discord.ui.TextInput(
-        label="In-game name",
-        placeholder="Enter your RuneScape name",
-        max_length=64,
-        required=True,
-    )
-    effort = discord.ui.TextInput(
-        label="Estimated event effort",
-        placeholder="e.g. Low / Medium / High",
-        max_length=100,
-        required=True,
-    )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        in_game_name = str(self.in_game_name.value).strip()
-        effort = str(self.effort.value).strip()
-        if not in_game_name or not effort:
-            await interaction.response.send_message(
-                "In-game name and effort are required.",
-                ephemeral=True,
-            )
-            return
-
-        try:
-            log_signup(
-                discord_username=interaction.user.name,
-                in_game_name=in_game_name,
-                effort=effort,
-            )
-            await interaction.response.send_message(
-                "Signup submitted successfully.",
-                ephemeral=True,
-            )
-        except DuplicateSignupError as e:
-            await interaction.response.send_message(
-                str(e),
-                ephemeral=True,
-            )
-        except Exception as e:
-            await interaction.response.send_message(
-                f"Failed to submit signup: {e}",
-                ephemeral=True,
-            )
-
 class EventsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -207,14 +161,58 @@ class EventsCog(commands.Cog):
             await interaction.response.send_message(f"Failed to fetch scoreboard: {e}", ephemeral=True)
 
     @app_commands.command(name="signup", description="Sign up for the latest event")
-    async def signup(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        in_game_name="Your RuneScape in-game name",
+        effort="Estimated effort for this event",
+    )
+    async def signup(
+        self,
+        interaction: discord.Interaction,
+        in_game_name: str,
+        effort: str,
+    ):
+        in_game_name = in_game_name.strip()
+        effort = effort.strip()
+        if not in_game_name:
+            await interaction.response.send_message(
+                "In-game name is required.",
+                ephemeral=True,
+            )
+            return
+        if not effort:
+            await interaction.response.send_message(
+                "Effort is required.",
+                ephemeral=True,
+            )
+            return
+
         if user_has_signup(interaction.user.name):
             await interaction.response.send_message(
                 "You are already signed up for this event.",
                 ephemeral=True,
             )
             return
-        await interaction.response.send_modal(SignupModal())
+
+        try:
+            log_signup(
+                discord_username=interaction.user.name,
+                in_game_name=in_game_name,
+                effort=effort,
+            )
+            await interaction.response.send_message(
+                "Signup submitted successfully.",
+                ephemeral=True,
+            )
+        except DuplicateSignupError as e:
+            await interaction.response.send_message(
+                str(e),
+                ephemeral=True,
+            )
+        except Exception as e:
+            await interaction.response.send_message(
+                f"Failed to submit signup: {e}",
+                ephemeral=True,
+            )
 
 async def setup(bot):
     await bot.add_cog(EventsCog(bot))
