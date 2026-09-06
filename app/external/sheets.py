@@ -10,8 +10,14 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 VALID_ITEMS_SHEET = 'Discord bot item db'
 EVENT_LOG_SHEET = 'Discord bot log'
 SCOREBOARD_SHEET = 'Discord bot scoreboard'
+SIGNUPS_SHEET = 'Discord bot signups'
 
 EVENT_LOG_HEADERS = ['Drop ID', 'Timestamp', 'User', 'Item', 'Team', 'Archive URL']
+SIGNUPS_HEADERS = ['Discord Username', 'In-Game Name', 'Estimated Effort']
+
+
+class DuplicateSignupError(Exception):
+    pass
 
 
 def build_log_row(drop_id: str, timestamp: str, user: str, item_name: str, team: str, archive_url: str | None = None) -> list[str]:
@@ -75,6 +81,33 @@ def get_scoreboard_scores() -> dict[int, str]:
             scores[i] = "0"
 
     return scores
+
+
+def ensure_signups_headers(sheet) -> None:
+    if not sheet.get_all_values():
+        sheet.append_row(SIGNUPS_HEADERS)
+
+
+def signup_exists(sheet, discord_username: str) -> bool:
+    normalized_username = discord_username.strip().casefold()
+    rows = sheet.get_all_values()
+    for row in rows:
+        if not row:
+            continue
+        first_col = row[0].strip()
+        if first_col.casefold() == SIGNUPS_HEADERS[0].casefold():
+            continue
+        if first_col.casefold() == normalized_username:
+            return True
+    return False
+
+
+def log_signup(discord_username: str, in_game_name: str, effort: str) -> None:
+    sheet = get_sheet(SIGNUPS_SHEET)
+    ensure_signups_headers(sheet)
+    if signup_exists(sheet, discord_username):
+        raise DuplicateSignupError("You are already signed up for this event.")
+    sheet.append_row([discord_username, in_game_name, effort])
 
 
 class EventItemCache:

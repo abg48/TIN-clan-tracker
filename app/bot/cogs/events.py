@@ -3,7 +3,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from datetime import datetime, timezone
-from app.external.sheets import log_item, undo_item, item_cache, get_scoreboard_scores
+from app.external.sheets import (
+    log_item,
+    undo_item,
+    item_cache,
+    get_scoreboard_scores,
+    log_signup,
+    DuplicateSignupError,
+)
 
 async def item_name_autocomplete(interaction: discord.Interaction, current: str):
     suggestions = [item for item in item_cache.get_items() if current.lower() in item.lower()]
@@ -72,6 +79,52 @@ class UndoDropView(discord.ui.View):
         else:
             await interaction.response.edit_message(view=self)
             await interaction.followup.send(f"Drop '{drop_id}' could not be undone (not found).", ephemeral=True)
+
+
+class SignupModal(discord.ui.Modal, title="Event Signup"):
+    in_game_name = discord.ui.TextInput(
+        label="In-game name",
+        placeholder="Enter your RuneScape name",
+        max_length=64,
+        required=True,
+    )
+    effort = discord.ui.TextInput(
+        label="Estimated event effort",
+        placeholder="e.g. Low / Medium / High",
+        max_length=100,
+        required=True,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        in_game_name = str(self.in_game_name.value).strip()
+        effort = str(self.effort.value).strip()
+        if not in_game_name or not effort:
+            await interaction.response.send_message(
+                "In-game name and effort are required.",
+                ephemeral=True,
+            )
+            return
+
+        try:
+            log_signup(
+                discord_username=interaction.user.name,
+                in_game_name=in_game_name,
+                effort=effort,
+            )
+            await interaction.response.send_message(
+                "Signup submitted successfully.",
+                ephemeral=True,
+            )
+        except DuplicateSignupError as e:
+            await interaction.response.send_message(
+                str(e),
+                ephemeral=True,
+            )
+        except Exception as e:
+            await interaction.response.send_message(
+                f"Failed to submit signup: {e}",
+                ephemeral=True,
+            )
 
 class EventsCog(commands.Cog):
     def __init__(self, bot):
@@ -151,6 +204,10 @@ class EventsCog(commands.Cog):
             await interaction.response.send_message(embed=embed)
         except Exception as e:
             await interaction.response.send_message(f"Failed to fetch scoreboard: {e}", ephemeral=True)
+
+    @app_commands.command(name="signup", description="Sign up for the latest event")
+    async def signup(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(SignupModal())
 
 async def setup(bot):
     await bot.add_cog(EventsCog(bot))
