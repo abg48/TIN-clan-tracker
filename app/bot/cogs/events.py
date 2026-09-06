@@ -10,6 +10,7 @@ from app.external.sheets import (
     get_scoreboard_scores,
     log_signup,
     DuplicateSignupError,
+    user_has_signup,
 )
 
 async def item_name_autocomplete(interaction: discord.Interaction, current: str):
@@ -207,6 +208,12 @@ class EventsCog(commands.Cog):
 
     @app_commands.command(name="signup", description="Sign up for the latest event")
     async def signup(self, interaction: discord.Interaction):
+        if user_has_signup(interaction.user.name):
+            await interaction.response.send_message(
+                "You are already signed up for this event.",
+                ephemeral=True,
+            )
+            return
         await interaction.response.send_modal(SignupModal())
 
 async def setup(bot):

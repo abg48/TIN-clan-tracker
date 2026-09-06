@@ -102,6 +102,12 @@ def signup_exists(sheet, discord_username: str) -> bool:
     return False
 
 
+def user_has_signup(discord_username: str) -> bool:
+    sheet = get_sheet(SIGNUPS_SHEET)
+    ensure_signups_headers(sheet)
+    return signup_exists(sheet, discord_username)
+
+
 def log_signup(discord_username: str, in_game_name: str, effort: str) -> None:
     sheet = get_sheet(SIGNUPS_SHEET)
     ensure_signups_headers(sheet)
